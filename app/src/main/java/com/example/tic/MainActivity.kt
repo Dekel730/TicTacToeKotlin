@@ -1,103 +1,112 @@
 package com.example.tictactoe
 
 import android.os.Bundle
-import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.gridlayout.widget.GridLayout
 import com.example.tic.R
 
 class MainActivity : AppCompatActivity() {
+    private var board = Array(3) { Array(3) { "" } }
+    private var isXTurn = true
+    private val buttons = mutableListOf<Button>()
+    private var isGame = true;
 
-    private var currentPlayer = "X"
-    private val board = Array(3) { arrayOfNulls<String>(3) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val buttons = arrayOf(
-            arrayOf(
-                findViewById<Button>(R.id.button00),
+        // Initialize buttons
+        buttons.addAll(
+            listOf(
+                findViewById(R.id.button00),
                 findViewById(R.id.button01),
-                findViewById(R.id.button02)
-            ),
-            arrayOf(
+                findViewById(R.id.button02),
                 findViewById(R.id.button10),
                 findViewById(R.id.button11),
-                findViewById(R.id.button12)
-            ),
-            arrayOf(
+                findViewById(R.id.button12),
                 findViewById(R.id.button20),
                 findViewById(R.id.button21),
                 findViewById(R.id.button22)
             )
         )
 
-        for (i in buttons.indices) {
-            for (j in buttons[i].indices) {
-                buttons[i][j].setOnClickListener {
-                    onButtonClick(buttons[i][j], i, j)
-                }
-            }
+        // Set click listeners for each button
+        buttons.forEachIndexed { index, button ->
+            button.setOnClickListener { handleButtonClick(index / 3, index % 3, button) }
         }
 
-        findViewById<Button>(R.id.restartButton).setOnClickListener {
-            resetGame(buttons)
-        }
-    }
-
-    private fun onButtonClick(button: Button, row: Int, col: Int) {
-        if (button.text.isEmpty()) {
-            button.text = currentPlayer
-            board[row][col] = currentPlayer
-            if (checkWin()) {
-                Toast.makeText(this, "Player $currentPlayer wins!", Toast.LENGTH_LONG).show()
-                disableBoard()
-            } else if (isBoardFull()) {
-                Toast.makeText(this, "It's a draw!", Toast.LENGTH_LONG).show()
+        // Start button logic (optional, reset game)
+        findViewById<Button>(R.id.restartButton)?.setOnClickListener {
+            if (isGame) {
+                Toast.makeText(this, "Game is still played", Toast.LENGTH_SHORT).show()
             } else {
-                currentPlayer = if (currentPlayer == "X") "O" else "X"
+                resetGame()
             }
         }
     }
 
-    private fun checkWin(): Boolean {
-        // Check rows, columns, and diagonals
-        for (i in 0..2) {
-            if (board[i][0] == currentPlayer && board[i][1] == currentPlayer && board[i][2] == currentPlayer) return true
-            if (board[0][i] == currentPlayer && board[1][i] == currentPlayer && board[2][i] == currentPlayer) return true
+    private fun handleButtonClick(row: Int, col: Int, button: Button) {
+        if (board[row][col].isNotEmpty()) {
+            Toast.makeText(this, "Cell already taken!", Toast.LENGTH_SHORT).show()
+            return
         }
-        if (board[0][0] == currentPlayer && board[1][1] == currentPlayer && board[2][2] == currentPlayer) return true
-        if (board[0][2] == currentPlayer && board[1][1] == currentPlayer && board[2][0] == currentPlayer) return true
+
+        // Update board and button
+        val symbol = if (isXTurn) "X" else "O"
+        board[row][col] = symbol
+        button.text = symbol
+        button.isEnabled = false
+
+        // Check for win or draw
+        if (checkWinner(symbol)) {
+            Toast.makeText(this, "$symbol wins!", Toast.LENGTH_LONG).show()
+            disableAllButtons()
+            isGame = false
+        } else if (isBoardFull()) {
+            Toast.makeText(this, "It's a draw!", Toast.LENGTH_LONG).show()
+            isGame = false
+        }
+
+        // Switch turn
+        isXTurn = !isXTurn
+    }
+
+    private fun checkWinner(symbol: String): Boolean {
+        // Check rows and columns
+        for (i in 0..2) {
+            if ((board[i][0] == symbol && board[i][1] == symbol && board[i][2] == symbol) ||
+                (board[0][i] == symbol && board[1][i] == symbol && board[2][i] == symbol)
+            ) return true
+        }
+
+        // Check diagonals
+        if ((board[0][0] == symbol && board[1][1] == symbol && board[2][2] == symbol) ||
+            (board[0][2] == symbol && board[1][1] == symbol && board[2][0] == symbol)
+        ) return true
+
         return false
     }
 
     private fun isBoardFull(): Boolean {
-        for (row in board) {
-            if (row.contains(null)) return false
-        }
-        return true
+        return board.all { row -> row.all { it.isNotEmpty() } }
     }
 
-    private fun disableBoard() {
-        findViewById<GridLayout>(R.id.gameBoard).let { gridLayout ->
-            for (i in 0 until gridLayout.childCount) {
-                val button = gridLayout.getChildAt(i) as Button
-                button.isEnabled = false
-            }
-        }
+    private fun disableAllButtons() {
+        buttons.forEach { it.isEnabled = false }
     }
 
-    private fun resetGame(buttons: Array<Array<Button>>) {
-        currentPlayer = "X"
-        for (i in board.indices) {
-            for (j in board[i].indices) {
-                board[i][j] = null
-                buttons[i][j].text = ""
-                buttons[i][j].isEnabled = true
-            }
+    private fun resetGame() {
+        // Reset board state
+        board = Array(3) { Array(3) { "" } }
+        isXTurn = true
+
+        // Reset buttons
+        buttons.forEach {
+            it.text = ""
+            it.isEnabled = true
         }
+
     }
 }
